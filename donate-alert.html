@@ -655,74 +655,202 @@
 
 <script>
   /* =====================================================
-     DONATE ALERT ENGINE
+     DONATE ALERT ENGINE — SOCIABUZZ REALTIME
      =====================================================
 
-     Data donasi bisa disuntikkan via:
-     1) window.donationData = { name, amount, message }
-     2) URL param: ?name=...&amount=...&message=...
-     3) Demo mode (fallback)
+     Cara kerja (prioritas):
+     1) Sociabuzz WebSocket  → auto trigger saat ada donasi
+     2) URL param            → ?name=&amount=&message=
+     3) window.donationData  → inject manual
+     4) Demo mode            → fallback jika tidak ada data
+
+     Cara pakai di TikTok Live Studio / OBS:
+     Tambahkan file ini langsung sebagai Browser Source:
+       https://labatir05.github.io/donate-alert/donate-alert.html
+
+     Ganti USERNAME_SOCIABUZZ di bawah dengan username Sociabuzz kamu!
   ===================================================== */
 
+  const SOCIABUZZ_USERNAME  = 'labatir05';   // ← GANTI dengan username Sociabuzz kamu
   const DISPLAY_DURATION_MS = 8000;
   const FADE_IN_DELAY_MS    = 300;
+  const RECONNECT_DELAY_MS  = 5000;
 
+  let alertQueue   = [];
+  let isShowing    = false;
+  let wsConnection = null;
+
+  /* ── Format Rupiah ──────────────────────────────── */
   function formatRupiah(amount) {
-    const num = parseInt(amount, 10);
-    if (isNaN(num)) return amount;
+    const num = parseInt(String(amount).replace(/\D/g, ''), 10);
+    if (isNaN(num)) return 'Rp ' + amount;
     return 'Rp ' + num.toLocaleString('id-ID');
   }
 
-  function getDonationData() {
-    if (window.donationData) return window.donationData;
-
-    const params  = new URLSearchParams(window.location.search);
-    const name    = params.get('name')    || '';
-    const amount  = params.get('amount')  || '';
-    const message = params.get('message') || '';
-
-    if (name) return { name, amount, message };
-
-    // Demo mode
-    return {
-      name:    'GhostHunter99',
-      amount:  75000,
-      message: 'Mantep streamnya! Lanjutkan terus bro, support dari kami! 👾'
-    };
-  }
-
+  /* ── Render data donasi ke DOM ──────────────────── */
   function renderAlert(data) {
     document.getElementById('donorName').textContent    = data.name    || 'Anonymous';
-    document.getElementById('donorAmount').textContent  = formatRupiah(data.amount);
-    document.getElementById('donorMessage').textContent = data.message || '(Tanpa pesan)';
+    document.getElementById('donorAmount').textContent  = formatRupiah(data.amount || data.total || 0);
+    document.getElementById('donorMessage').textContent = data.message || data.support_message || '(Tanpa pesan)';
   }
 
+  /* ── Tampilkan satu alert, lalu proses antrian ──── */
   function showAlert() {
-    const wrapper = document.getElementById('alert-wrapper');
-    setTimeout(() => wrapper.classList.add('visible'), FADE_IN_DELAY_MS);
-    setTimeout(() => {
-      wrapper.classList.remove('visible');
-      wrapper.classList.add('hiding');
-    }, DISPLAY_DURATION_MS + FADE_IN_DELAY_MS);
-  }
+    if (isShowing || alertQueue.length === 0) return;
+    isShowing = true;
 
-  window.addEventListener('DOMContentLoaded', () => {
-    renderAlert(getDonationData());
-    showAlert();
-  });
-
-  /* Public API for Sociabuzz widget callback */
-  window.showDonateAlert = function(data) {
+    const data    = alertQueue.shift();
     const wrapper = document.getElementById('alert-wrapper');
+
+    // Reset state
     wrapper.classList.remove('visible', 'hiding');
-
-    // Reset deco bar animation
     const fill = wrapper.querySelector('.deco-bar-fill');
     if (fill) { fill.style.animation = 'none'; void fill.offsetWidth; fill.style.animation = ''; }
 
     renderAlert(data);
+
+    // Fade in
+    setTimeout(() => wrapper.classList.add('visible'), FADE_IN_DELAY_MS);
+
+    // Fade out & proses antrian berikutnya
+    setTimeout(() => {
+      wrapper.classList.remove('visible');
+      wrapper.classList.add('hiding');
+      setTimeout(() => {
+        isShowing = false;
+        showAlert(); // proses antrian berikutnya
+      }, 600);
+    }, DISPLAY_DURATION_MS + FADE_IN_DELAY_MS);
+  }
+
+  /* ── Tambah ke antrian ──────────────────────────── */
+  function queueAlert(data) {
+    alertQueue.push(data);
     showAlert();
-  };
+  }
+
+  /* ── Sociabuzz WebSocket ────────────────────────── */
+  function connectSociabuzz() {
+    if (!SOCIABUZZ_USERNAME || SOCIABUZZ_USERNAME === 'USERNAME_KAMU') return;
+
+    // Sociabuzz menggunakan Socket.IO untuk real-time events
+    const wsUrl = 'wss://io.sociabuzz.com';
+
+    try {
+      // Muat Socket.IO dari Sociabuzz CDN
+      const script = document.createElement('script');
+      script.src = 'https://io.sociabuzz.com/socket.io/socket.io.js';
+      script.onload = () => initSocket();
+      script.onerror = () => console.warn('[Gengar Alert] Socket.IO gagal dimuat, coba reconnect...');
+      document.head.appendChild(script);
+    } catch(e) {
+      console.warn('[Gengar Alert] Koneksi WebSocket gagal:', e);
+    }
+  }
+
+  function initSocket() {
+    try {
+      wsConnection = io('https://io.sociabuzz.com', {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionDelay: RECONNECT_DELAY_MS
+      });
+
+      wsConnection.on('connect', () => {
+        console.log('[Gengar Alert] Terhubung ke Sociabuzz!');
+        // Join channel milik streamer
+        wsConnection.emit('join', { username: SOCIABUZZ_USERNAME });
+      });
+
+      // Event donasi masuk (Sociabuzz tribe payment)
+      wsConnection.on('tribe:payment', (data) => {
+        console.log('[Gengar Alert] Donasi masuk:', data);
+        queueAlert({
+          name:    data.supporter_name || data.name || 'Anonymous',
+          amount:  data.total          || data.amount || 0,
+          message: data.support_message|| data.message || ''
+        });
+      });
+
+      // Event test dari Sociabuzz dashboard
+      wsConnection.on('tribe:payment:test', (data) => {
+        console.log('[Gengar Alert] Test donasi:', data);
+        queueAlert({
+          name:    data.supporter_name || 'Tester',
+          amount:  data.total          || 10000,
+          message: data.support_message|| 'Ini adalah test alert! 👻'
+        });
+      });
+
+      wsConnection.on('disconnect', () => {
+        console.warn('[Gengar Alert] Terputus dari Sociabuzz, reconnecting...');
+      });
+
+    } catch(e) {
+      console.warn('[Gengar Alert] initSocket error:', e);
+    }
+  }
+
+  /* ── Cek URL Parameter (manual trigger / test) ──── */
+  function checkUrlParams() {
+    const params  = new URLSearchParams(window.location.search);
+    const name    = params.get('name');
+    const amount  = params.get('amount');
+    const message = params.get('message');
+    const demo    = params.get('demo');
+
+    if (name) {
+      queueAlert({ name, amount, message });
+      return true;
+    }
+
+    // Demo mode: ?demo=1 atau tidak ada koneksi
+    if (demo === '1') {
+      queueAlert({
+        name:    'GhostHunter99',
+        amount:  75000,
+        message: 'Mantep streamnya! Lanjutkan terus bro! 👾'
+      });
+      return true;
+    }
+
+    return false;
+  }
+
+  /* ── Init ───────────────────────────────────────── */
+  window.addEventListener('DOMContentLoaded', () => {
+    // Coba URL param dulu
+    const hasParam = checkUrlParams();
+
+    // Hubungkan ke Sociabuzz WebSocket
+    connectSociabuzz();
+
+    // Jika tidak ada param dan tidak ada username → demo mode
+    if (!hasParam && (!SOCIABUZZ_USERNAME || SOCIABUZZ_USERNAME === 'USERNAME_KAMU')) {
+      queueAlert({
+        name:    'GhostHunter99',
+        amount:  75000,
+        message: 'Mantep streamnya! Lanjutkan terus bro! 👾'
+      });
+    }
+  });
+
+  /* ── Public API (bisa dipanggil manual) ─────────── */
+  window.showDonateAlert = function(data) { queueAlert(data); };
+
+  /* ── Listen postMessage dari parent iframe ──────── */
+  window.addEventListener('message', (event) => {
+    try {
+      const data = typeof event.data === 'string' ? JSON.parse(event.data) : event.data;
+      if (data && (data.name || data.supporter_name)) {
+        queueAlert({
+          name:    data.name    || data.supporter_name  || 'Anonymous',
+          amount:  data.amount  || data.total           || 0,
+          message: data.message || data.support_message || ''
+        });
+      }
+    } catch(e) {}
+  });
 </script>
 
 </body>
