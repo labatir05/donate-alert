@@ -1,0 +1,729 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Gengar Donate Alert</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ===========================
+       RESET & BASE
+    =========================== */
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      background: transparent;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* ===========================
+       DESIGN TOKENS — GENGAR
+    =========================== */
+    :root {
+      --clr-bg-deep:      #0a0010;
+      --clr-bg-card:      #110020;
+      --clr-purple-900:   #1a0030;
+      --clr-purple-700:   #3d0070;
+      --clr-purple-500:   #6a00c8;
+      --clr-purple-400:   #8b2be2;
+      --clr-purple-300:   #b060ff;
+      --clr-purple-200:   #cc99ff;
+      --clr-purple-100:   #ead6ff;
+      --clr-shadow:       #4a00a0;
+      --clr-lightning:    #d4aaff;
+      --clr-lightning-2:  #ffffff;
+      --clr-gold:         #ffd700;
+      --clr-gold-glow:    #ffaa00;
+      --font-title:       'Orbitron', sans-serif;
+      --font-name:        'Cinzel', serif;
+      --font-body:        'Rajdhani', sans-serif;
+
+      /* 32:9 aspect ratio */
+      --card-w:    1280px;
+      --card-h:    360px;
+    }
+
+    /* ===========================
+       ALERT WRAPPER
+    =========================== */
+    #alert-wrapper {
+      position: relative;
+      width: var(--card-w);
+      height: var(--card-h);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      transform: translateY(60px) scale(0.92);
+      transition: opacity 0.6s cubic-bezier(.22,.68,0,1.6),
+                  transform 0.6s cubic-bezier(.22,.68,0,1.6);
+    }
+
+    #alert-wrapper.visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+    }
+
+    #alert-wrapper.hiding {
+      opacity: 0;
+      transform: translateY(-40px) scale(0.95);
+      transition: opacity 0.5s ease-in, transform 0.5s ease-in;
+    }
+
+    /* ===========================
+       CARD
+    =========================== */
+    .card {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      border-radius: 18px;
+      overflow: hidden;
+      background:
+        radial-gradient(ellipse 60% 90% at 10% 50%, #2a005588 0%, transparent 60%),
+        radial-gradient(ellipse 50% 80% at 90% 50%, #1a003366 0%, transparent 60%),
+        linear-gradient(135deg, #0e0020 0%, #130025 40%, #0a0018 100%);
+      border: 1.5px solid #5a0099;
+      box-shadow:
+        0 0 0 1px #3a006644,
+        0 0 40px #6a00c840,
+        0 0 80px #3d007020,
+        inset 0 0 60px #1a003320;
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+
+    /* Animated border shimmer */
+    .card::before {
+      content: '';
+      position: absolute;
+      inset: -2px;
+      border-radius: 20px;
+      background: conic-gradient(
+        from var(--border-angle, 0deg),
+        transparent 0%,
+        #8b2be2 20%,
+        #cc99ff 30%,
+        #8b2be2 40%,
+        transparent 60%,
+        #3d0070 80%,
+        transparent 100%
+      );
+      z-index: -1;
+      animation: borderSpin 3s linear infinite;
+    }
+
+    @property --border-angle {
+      syntax: '<angle>';
+      inherits: false;
+      initial-value: 0deg;
+    }
+
+    @keyframes borderSpin {
+      to { --border-angle: 360deg; }
+    }
+
+    /* Inner card glass layer */
+    .card::after {
+      content: '';
+      position: absolute;
+      inset: 1px;
+      border-radius: 17px;
+      background: linear-gradient(135deg, #0e0020 0%, #130025 40%, #0a0018 100%);
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* ===========================
+       GENGAR SIDE PANEL
+    =========================== */
+    .gengar-panel {
+      position: relative;
+      flex: 0 0 300px;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 2;
+      overflow: hidden;
+    }
+
+    .gengar-panel::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(ellipse 80% 80% at 50% 55%, #3d007060 0%, transparent 70%);
+      animation: auraPulse 3s ease-in-out infinite;
+    }
+
+    @keyframes auraPulse {
+      0%, 100% { opacity: 0.5; transform: scale(1); }
+      50%       { opacity: 1;   transform: scale(1.08); }
+    }
+
+    .gengar-svg {
+      position: relative;
+      width: 220px;
+      height: 220px;
+      filter: drop-shadow(0 0 18px #8b2be2) drop-shadow(0 0 40px #6a00c8);
+      animation: gengarFloat 4s ease-in-out infinite;
+      z-index: 2;
+    }
+
+    @keyframes gengarFloat {
+      0%, 100% { transform: translateY(0px) rotate(-2deg); }
+      50%       { transform: translateY(-16px) rotate(2deg); }
+    }
+
+    /* ===========================
+       DIVIDER LINE
+    =========================== */
+    .divider-line {
+      position: relative;
+      flex: 0 0 2px;
+      height: 75%;
+      background: linear-gradient(to bottom, transparent, #8b2be2, #cc99ff, #8b2be2, transparent);
+      box-shadow: 0 0 10px #8b2be2, 0 0 20px #6a00c8;
+      z-index: 2;
+    }
+
+    /* ===========================
+       CONTENT AREA
+    =========================== */
+    .content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      gap: 10px;
+      padding: 28px 36px 28px 40px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: linear-gradient(90deg, #3d0070, #6a00c8);
+      border: 1px solid #8b2be2;
+      border-radius: 20px;
+      padding: 4px 14px;
+      width: fit-content;
+      box-shadow: 0 0 12px #6a00c840;
+    }
+
+    .badge-icon {
+      font-size: 0.75rem;
+      animation: badgePulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes badgePulse {
+      0%, 100% { opacity: 1; }
+      50%       { opacity: 0.4; }
+    }
+
+    .badge-text {
+      font-family: var(--font-title);
+      font-size: 0.6rem;
+      letter-spacing: 0.25em;
+      color: var(--clr-purple-200);
+      text-transform: uppercase;
+    }
+
+    .donor-name {
+      font-family: var(--font-name);
+      font-size: 2.4rem;
+      font-weight: 900;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #ffffff 0%, #cc99ff 40%, #8b2be2 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 12px #8b2be260);
+      animation: nameGlow 3s ease-in-out infinite alternate;
+    }
+
+    @keyframes nameGlow {
+      from { filter: drop-shadow(0 0 8px #8b2be260); }
+      to   { filter: drop-shadow(0 0 20px #cc99ff80); }
+    }
+
+    .amount-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .amount-label {
+      font-family: var(--font-body);
+      font-size: 0.75rem;
+      letter-spacing: 0.15em;
+      color: var(--clr-purple-200);
+      text-transform: uppercase;
+      opacity: 0.8;
+    }
+
+    .amount-value {
+      font-family: var(--font-title);
+      font-size: 1.9rem;
+      font-weight: 900;
+      background: linear-gradient(135deg, #ffd700 0%, #ffaa00 50%, #ff8800 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 0 10px #ffd70080);
+      animation: goldPulse 2s ease-in-out infinite alternate;
+    }
+
+    @keyframes goldPulse {
+      from { filter: drop-shadow(0 0 6px #ffd70060); }
+      to   { filter: drop-shadow(0 0 18px #ffaa0099); }
+    }
+
+    .message-box {
+      position: relative;
+      background: #1a003340;
+      border-left: 3px solid #6a00c8;
+      border-radius: 0 8px 8px 0;
+      padding: 8px 14px;
+      max-width: 680px;
+    }
+
+    .message-text {
+      font-family: var(--font-body);
+      font-size: 1.0rem;
+      font-weight: 600;
+      color: var(--clr-purple-100);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    /* ===========================
+       LIGHTNING BOLTS
+    =========================== */
+    .lightning-layer {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 3;
+      overflow: hidden;
+    }
+
+    .bolt {
+      position: absolute;
+      opacity: 0;
+      animation: boltFlash var(--bolt-dur, 4s) var(--bolt-delay, 0s) infinite;
+    }
+
+    @keyframes boltFlash {
+      0%,  90%, 100% { opacity: 0; }
+      91%            { opacity: 1;  filter: drop-shadow(0 0 4px #d4aaff) drop-shadow(0 0 10px #8b2be2); }
+      92%            { opacity: 0.2; }
+      93%            { opacity: 1;  filter: drop-shadow(0 0 6px #fff) drop-shadow(0 0 14px #cc99ff); }
+      95%            { opacity: 0; }
+    }
+
+    .bolt.b1  { top: 2%;  left: 5%;  --bolt-dur:5s;   --bolt-delay:0.0s; }
+    .bolt.b2  { top: 60%; left: 8%;  --bolt-dur:4s;   --bolt-delay:1.3s; }
+    .bolt.b3  { top: 10%; right:4%;  --bolt-dur:6s;   --bolt-delay:0.7s; }
+    .bolt.b4  { top: 55%; right:3%;  --bolt-dur:3.5s; --bolt-delay:2.1s; }
+    .bolt.b5  { top: 30%; left: 25%; --bolt-dur:7s;   --bolt-delay:1.8s; }
+    .bolt.b6  { top: 5%;  left: 45%; --bolt-dur:4.5s; --bolt-delay:0.4s; }
+    .bolt.b7  { top: 70%; right:20%; --bolt-dur:5.5s; --bolt-delay:2.8s; }
+    .bolt.b8  { bottom:5%;left:60%;  --bolt-dur:3.8s; --bolt-delay:3.2s; }
+
+    .bolt svg       { width: 28px; height: 60px; }
+    .bolt.small svg { width: 16px; height: 36px; }
+
+    /* ===========================
+       GHOST ORBS (ambient)
+    =========================== */
+    .orb {
+      position: absolute;
+      border-radius: 50%;
+      background: radial-gradient(circle, #6a00c850 0%, transparent 70%);
+      animation: orbDrift var(--orb-dur, 8s) var(--orb-delay, 0s) ease-in-out infinite alternate;
+      pointer-events: none;
+      z-index: 1;
+    }
+
+    @keyframes orbDrift {
+      0%   { transform: translate(0, 0) scale(1);   opacity: 0.4; }
+      100% { transform: translate(var(--orb-tx, 20px), var(--orb-ty, -20px)) scale(1.2); opacity: 0.7; }
+    }
+
+    .orb1 { width:120px; height:120px; top:-20px;  left:-20px;  --orb-dur:7s; --orb-delay:0s; --orb-tx:30px;  --orb-ty:20px;  }
+    .orb2 { width:80px;  height:80px;  bottom:-10px; right:40px; --orb-dur:9s; --orb-delay:1s; --orb-tx:-20px; --orb-ty:-30px; }
+    .orb3 { width:60px;  height:60px;  top:40%; right:280px;     --orb-dur:6s; --orb-delay:2s; --orb-tx:10px;  --orb-ty:15px;  }
+
+    /* ===========================
+       SPARKLE PARTICLES
+    =========================== */
+    .sparkles {
+      position: absolute;
+      inset: 0;
+      pointer-events: none;
+      z-index: 2;
+    }
+
+    .sparkle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: #cc99ff;
+      box-shadow: 0 0 6px #8b2be2;
+      opacity: 0;
+      animation: sparkleFly var(--sp-dur, 3s) var(--sp-delay, 0s) ease-in-out infinite;
+    }
+
+    @keyframes sparkleFly {
+      0%   { opacity: 0; transform: translate(0,0) scale(0); }
+      30%  { opacity: 1; transform: translate(var(--sp-tx, 10px), var(--sp-ty, -20px)) scale(1); }
+      70%  { opacity: 0.6; }
+      100% { opacity: 0; transform: translate(var(--sp-tx2, 20px), var(--sp-ty2, -40px)) scale(0.3); }
+    }
+
+    .sp1  { left:12%;  top:70%; --sp-dur:3s;   --sp-delay:0.0s; --sp-tx:8px;  --sp-ty:-30px; --sp-tx2:14px; --sp-ty2:-55px; }
+    .sp2  { left:20%;  top:50%; --sp-dur:4s;   --sp-delay:0.5s; --sp-tx:-6px; --sp-ty:-25px; --sp-tx2:-10px;--sp-ty2:-48px; }
+    .sp3  { left:33%;  top:80%; --sp-dur:3.5s; --sp-delay:1.2s; --sp-tx:12px; --sp-ty:-22px; --sp-tx2:18px; --sp-ty2:-42px; }
+    .sp4  { left:50%;  top:60%; --sp-dur:5s;   --sp-delay:0.8s; --sp-tx:-8px; --sp-ty:-28px; --sp-tx2:-14px;--sp-ty2:-50px; }
+    .sp5  { left:65%;  top:75%; --sp-dur:4.5s; --sp-delay:1.8s; --sp-tx:6px;  --sp-ty:-32px; --sp-tx2:10px; --sp-ty2:-58px; }
+    .sp6  { left:78%;  top:55%; --sp-dur:3.2s; --sp-delay:2.3s; --sp-tx:-10px;--sp-ty:-20px; --sp-tx2:-16px;--sp-ty2:-38px; }
+    .sp7  { left:88%;  top:70%; --sp-dur:4.8s; --sp-delay:0.3s; --sp-tx:8px;  --sp-ty:-26px; --sp-tx2:12px; --sp-ty2:-48px; }
+    .sp8  { left:8%;   top:30%; --sp-dur:3.7s; --sp-delay:1.5s; --sp-tx:14px; --sp-ty:-18px; --sp-tx2:20px; --sp-ty2:-34px; }
+    .sp9  { left:42%;  top:20%; --sp-dur:5.2s; --sp-delay:2.8s; --sp-tx:-6px; --sp-ty:-22px; --sp-tx2:-10px;--sp-ty2:-40px; }
+    .sp10 { left:60%;  top:85%; --sp-dur:4.1s; --sp-delay:0.9s; --sp-tx:10px; --sp-ty:-28px; --sp-tx2:16px; --sp-ty2:-52px; }
+    .sp11 { left:75%;  top:25%; --sp-dur:3.9s; --sp-delay:3.1s; --sp-tx:-8px; --sp-ty:-20px; --sp-tx2:-12px;--sp-ty2:-38px; }
+    .sp12 { left:92%;  top:40%; --sp-dur:4.3s; --sp-delay:1.6s; --sp-tx:6px;  --sp-ty:-30px; --sp-tx2:10px; --sp-ty2:-54px; }
+
+    /* ===========================
+       COIN BURST (amount entry)
+    =========================== */
+    .coin-burst {
+      display: inline-block;
+      animation: coinSpin 0.4s ease-out 0.3s both;
+    }
+
+    @keyframes coinSpin {
+      from { transform: rotateY(90deg) scale(0.5); opacity: 0; }
+      to   { transform: rotateY(0deg)  scale(1);   opacity: 1; }
+    }
+
+    /* ===========================
+       PROGRESS BAR (decoration)
+    =========================== */
+    .deco-bar {
+      position: absolute;
+      bottom: 14px;
+      left: 320px;
+      right: 36px;
+      height: 2px;
+      background: #2a005540;
+      border-radius: 1px;
+      overflow: hidden;
+      z-index: 2;
+    }
+
+    .deco-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #6a00c8, #cc99ff, #8b2be2);
+      box-shadow: 0 0 8px #8b2be2;
+      animation: fillBar 2s 0.8s cubic-bezier(.22,.68,0,1.2) forwards;
+    }
+
+    @keyframes fillBar {
+      to { width: 100%; }
+    }
+  </style>
+</head>
+<body>
+
+<div id="alert-wrapper">
+
+  <!-- AMBIENT ORBS -->
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+
+  <!-- SPARKLES -->
+  <div class="sparkles">
+    <div class="sparkle sp1"></div><div class="sparkle sp2"></div>
+    <div class="sparkle sp3"></div><div class="sparkle sp4"></div>
+    <div class="sparkle sp5"></div><div class="sparkle sp6"></div>
+    <div class="sparkle sp7"></div><div class="sparkle sp8"></div>
+    <div class="sparkle sp9"></div><div class="sparkle sp10"></div>
+    <div class="sparkle sp11"></div><div class="sparkle sp12"></div>
+  </div>
+
+  <!-- MAIN CARD -->
+  <div class="card">
+
+    <!-- LIGHTNING LAYER -->
+    <div class="lightning-layer">
+
+      <div class="bolt b1">
+        <svg viewBox="0 0 28 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M18 2 L8 28 L16 28 L6 58"  stroke="#cc99ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 5 L10 29 L18 29 L8 57" stroke="#ffffff" stroke-width="1"   stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+        </svg>
+      </div>
+
+      <div class="bolt b2 small">
+        <svg viewBox="0 0 16 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M11 2 L5 16 L10 16 L4 34"  stroke="#b060ff" stroke-width="2"   stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M12 3 L6 16 L11 16 L5 33"  stroke="#fff"    stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+        </svg>
+      </div>
+
+      <div class="bolt b3">
+        <svg viewBox="0 0 28 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2 L20 28 L12 28 L22 58" stroke="#cc99ff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M8 5 L18 29 L10 29 L20 57"  stroke="#ffffff" stroke-width="1"   stroke-linecap="round" stroke-linejoin="round" opacity="0.6"/>
+        </svg>
+      </div>
+
+      <div class="bolt b4 small">
+        <svg viewBox="0 0 16 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M5 2 L11 16 L6 16 L12 34"  stroke="#b060ff" stroke-width="2"   stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M4 3 L10 16 L5 16 L11 33"  stroke="#fff"    stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+        </svg>
+      </div>
+
+      <div class="bolt b5 small">
+        <svg viewBox="0 0 16 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M10 2 L6 16 L11 16 L5 34"  stroke="#d4aaff" stroke-width="2"   stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M11 3 L7 16 L12 16 L6 33"  stroke="#fff"    stroke-width="0.8" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+        </svg>
+      </div>
+
+      <div class="bolt b6">
+        <svg viewBox="0 0 28 60" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M14 2 L7 24 L15 24 L4 58"  stroke="#8b2be2" stroke-width="3"   stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M15 2 L8 24 L16 24 L5 58"  stroke="#ead6ff" stroke-width="1"   stroke-linecap="round" stroke-linejoin="round" opacity="0.7"/>
+        </svg>
+      </div>
+
+      <div class="bolt b7 small">
+        <svg viewBox="0 0 16 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M8 2 L4 16 L9 16 L3 34" stroke="#cc99ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+      <div class="bolt b8 small">
+        <svg viewBox="0 0 16 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M9 2 L5 16 L10 16 L4 34" stroke="#b060ff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+
+    </div><!-- /lightning-layer -->
+
+    <!-- GENGAR SIDE PANEL -->
+    <div class="gengar-panel">
+      <svg class="gengar-svg" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="gengarBody" cx="50%" cy="55%" r="50%">
+            <stop offset="0%"   stop-color="#5a00a0"/>
+            <stop offset="60%"  stop-color="#2d0060"/>
+            <stop offset="100%" stop-color="#100020"/>
+          </radialGradient>
+          <radialGradient id="eyeGlow" cx="50%" cy="50%" r="50%">
+            <stop offset="0%"   stop-color="#ffffff"/>
+            <stop offset="40%"  stop-color="#dd99ff"/>
+            <stop offset="100%" stop-color="#8b2be2" stop-opacity="0"/>
+          </radialGradient>
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="4" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+          <filter id="bodyGlow">
+            <feGaussianBlur stdDeviation="8" result="blur"/>
+            <feComposite in="SourceGraphic" in2="blur" operator="over"/>
+          </filter>
+        </defs>
+
+        <!-- Ghost body aura -->
+        <ellipse cx="100" cy="120" rx="88" ry="82" fill="#6a00c820" filter="url(#bodyGlow)"/>
+
+        <!-- Main body -->
+        <path d="
+          M 100 30
+          C 60 30, 25 60, 20 100
+          C 15 135, 20 155, 25 165
+          C 30 175, 38 178, 48 170
+          C 55 163, 55 155, 60 155
+          C 65 155, 68 165, 76 165
+          C 84 165, 86 155, 92 155
+          C 98 155, 100 165, 108 165
+          C 116 165, 118 155, 124 155
+          C 130 155, 130 163, 137 170
+          C 147 178, 155 175, 160 165
+          C 165 155, 170 135, 165 100
+          C 160 60, 140 30, 100 30 Z
+        " fill="url(#gengarBody)" stroke="#7a00c8" stroke-width="1.5"/>
+
+        <!-- Left ear spike -->
+        <path d="M 42 48 L 25 15 L 65 42" fill="#2d0060" stroke="#6a00c8" stroke-width="1.2"/>
+        <!-- Right ear spike -->
+        <path d="M 158 48 L 175 15 L 135 42" fill="#2d0060" stroke="#6a00c8" stroke-width="1.2"/>
+
+        <!-- Left eye -->
+        <ellipse cx="72" cy="92" rx="22" ry="18" fill="#180030"/>
+        <ellipse cx="72" cy="92" rx="14" ry="14" fill="#dd99ff" filter="url(#glow)"/>
+        <ellipse cx="72" cy="92" rx="7"  ry="9"  fill="#cc0066"/>
+        <ellipse cx="68" cy="87" rx="4"  ry="3"  fill="white" opacity="0.9"/>
+
+        <!-- Right eye -->
+        <ellipse cx="128" cy="92" rx="22" ry="18" fill="#180030"/>
+        <ellipse cx="128" cy="92" rx="14" ry="14" fill="#dd99ff" filter="url(#glow)"/>
+        <ellipse cx="128" cy="92" rx="7"  ry="9"  fill="#cc0066"/>
+        <ellipse cx="124" cy="87" rx="4"  ry="3"  fill="white" opacity="0.9"/>
+
+        <!-- Mouth -->
+        <path d="M 55 125 Q 100 158 145 125" fill="#100020" stroke="#8b2be2" stroke-width="1.5"/>
+        <!-- Tongue -->
+        <ellipse cx="100" cy="148" rx="20" ry="10" fill="#cc0066"/>
+        <path d="M 80 148 Q 100 160 120 148" fill="#aa0044"/>
+
+        <!-- Teeth -->
+        <path d="M 65 130 L 70 142 L 76 130"  fill="white"/>
+        <path d="M 83 134 L 88 148 L 93 134"  fill="white"/>
+        <path d="M 107 134 L 112 148 L 117 134" fill="white"/>
+        <path d="M 124 130 L 129 142 L 134 130" fill="white"/>
+
+        <!-- Shadow hands -->
+        <path d="M 10 110 C 5 100, 0 115, 5 125 C 10 135, 20 130, 22 120 Z" fill="#1a0040" stroke="#6a00c8" stroke-width="1"/>
+        <path d="M 190 110 C 195 100, 200 115, 195 125 C 190 135, 180 130, 178 120 Z" fill="#1a0040" stroke="#6a00c8" stroke-width="1"/>
+
+        <!-- Eye glow animations -->
+        <ellipse cx="72"  cy="92" rx="22" ry="18" fill="url(#eyeGlow)" opacity="0.3">
+          <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2.5s" repeatCount="indefinite"/>
+        </ellipse>
+        <ellipse cx="128" cy="92" rx="22" ry="18" fill="url(#eyeGlow)" opacity="0.3">
+          <animate attributeName="opacity" values="0.3;0.7;0.3" dur="2.5s" repeatCount="indefinite"/>
+        </ellipse>
+      </svg>
+    </div>
+
+    <!-- DIVIDER -->
+    <div class="divider-line"></div>
+
+    <!-- CONTENT -->
+    <div class="content">
+      <div class="badge">
+        <span class="badge-icon">👻</span>
+        <span class="badge-text">Support Received</span>
+      </div>
+
+      <div class="donor-name" id="donorName">SupporterName</div>
+
+      <div class="amount-row">
+        <span class="amount-label">Total</span>
+        <span class="amount-value coin-burst" id="donorAmount">Rp 50.000</span>
+      </div>
+
+      <div class="message-box">
+        <div class="message-text" id="donorMessage">
+          Halo! Semangat terus streamnya, keren banget! 🎮
+        </div>
+      </div>
+    </div>
+
+    <!-- DECO BAR -->
+    <div class="deco-bar">
+      <div class="deco-bar-fill"></div>
+    </div>
+
+  </div><!-- /card -->
+</div><!-- /alert-wrapper -->
+
+<script>
+  /* =====================================================
+     DONATE ALERT ENGINE
+     =====================================================
+
+     Data donasi bisa disuntikkan via:
+     1) window.donationData = { name, amount, message }
+     2) URL param: ?name=...&amount=...&message=...
+     3) Demo mode (fallback)
+  ===================================================== */
+
+  const DISPLAY_DURATION_MS = 8000;
+  const FADE_IN_DELAY_MS    = 300;
+
+  function formatRupiah(amount) {
+    const num = parseInt(amount, 10);
+    if (isNaN(num)) return amount;
+    return 'Rp ' + num.toLocaleString('id-ID');
+  }
+
+  function getDonationData() {
+    if (window.donationData) return window.donationData;
+
+    const params  = new URLSearchParams(window.location.search);
+    const name    = params.get('name')    || '';
+    const amount  = params.get('amount')  || '';
+    const message = params.get('message') || '';
+
+    if (name) return { name, amount, message };
+
+    // Demo mode
+    return {
+      name:    'GhostHunter99',
+      amount:  75000,
+      message: 'Mantep streamnya! Lanjutkan terus bro, support dari kami! 👾'
+    };
+  }
+
+  function renderAlert(data) {
+    document.getElementById('donorName').textContent    = data.name    || 'Anonymous';
+    document.getElementById('donorAmount').textContent  = formatRupiah(data.amount);
+    document.getElementById('donorMessage').textContent = data.message || '(Tanpa pesan)';
+  }
+
+  function showAlert() {
+    const wrapper = document.getElementById('alert-wrapper');
+    setTimeout(() => wrapper.classList.add('visible'), FADE_IN_DELAY_MS);
+    setTimeout(() => {
+      wrapper.classList.remove('visible');
+      wrapper.classList.add('hiding');
+    }, DISPLAY_DURATION_MS + FADE_IN_DELAY_MS);
+  }
+
+  window.addEventListener('DOMContentLoaded', () => {
+    renderAlert(getDonationData());
+    showAlert();
+  });
+
+  /* Public API for Sociabuzz widget callback */
+  window.showDonateAlert = function(data) {
+    const wrapper = document.getElementById('alert-wrapper');
+    wrapper.classList.remove('visible', 'hiding');
+
+    // Reset deco bar animation
+    const fill = wrapper.querySelector('.deco-bar-fill');
+    if (fill) { fill.style.animation = 'none'; void fill.offsetWidth; fill.style.animation = ''; }
+
+    renderAlert(data);
+    showAlert();
+  };
+</script>
+
+</body>
+</html>
